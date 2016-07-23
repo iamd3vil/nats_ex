@@ -15,6 +15,7 @@ defmodule NatsEx.Connection do
   require Logger
   import NatsEx.Protocol
   use GenServer
+  alias NatsEx.SidCounter
 
   @info_regex ~r/INFO (?<info_regex>.+) \r\n/
   @msg_regex ~r/(?<subject>.+) (?<sid>[0-9]+) (?<reply_to>.+)? ?(?<bytes>[0-9]+)\r\n/
@@ -50,7 +51,7 @@ defmodule NatsEx.Connection do
   """
   @spec sub(pid, String.t, integer) :: :ok
   def sub(conn, subject, queue_group \\ nil) do
-    sid = NatsEx.SidCounter.inc()
+    sid = SidCounter.inc()
     :ok = GenServer.call(conn, {:sub, self(), subject, sid, queue_group})
     :gproc.reg({:p, :l, {self(), conn, subject}}, sid)
     :ok
@@ -89,7 +90,8 @@ defmodule NatsEx.Connection do
     {:ok, info_mesg} = :gen_tcp.recv(socket, 0)
 
     # Decode info
-    info = Regex.named_captures(@info_regex, info_mesg)
+    info = @info_regex
+    |> Regex.named_captures(info_mesg)
     |> Map.get("info_regex")
     |> Poison.decode!
 
@@ -229,7 +231,7 @@ defmodule NatsEx.Connection do
     sid
     |> String.to_integer
     |> :pg2.get_local_members
-    |> Enum.each(fn member -> 
+    |> Enum.each(fn member ->
         send(member, {:nats_ex, :msg, subject, rep_to, payload})
     end)
   end
@@ -238,7 +240,7 @@ defmodule NatsEx.Connection do
     sid
     |> String.to_integer
     |> :pg2.get_local_members
-    |> Enum.each(fn member -> 
+    |> Enum.each(fn member ->
         send(member, {:nats_ex, :msg, subject, rep_to, payload})
     end)
   end

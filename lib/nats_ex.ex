@@ -1,4 +1,7 @@
 defmodule NatsEx do
+  @moduledoc """
+  NatsEx application
+  """
   use Application
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
