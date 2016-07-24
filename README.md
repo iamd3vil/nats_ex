@@ -63,3 +63,6 @@ It's not available on Hex yet, but if you want to try it out:
     end
     ```
 
+## License
+
+MIT License. Please see LICENSE.md for more details.
