@@ -26,4 +26,28 @@ defmodule NatsEx.ProtocolTest do
     assert Protocol.make_unsub_message(sid, num_of_msgs)
                      == "UNSUB #{sid} #{num_of_msgs}\r\n"
   end
+
+  test "parsing info message" do
+    info_mesg = ~s(INFO {"server": "gnatsd", version: "0.8.0", auth_required: true})
+    parsed_info_message = Protocol.parse_info_mesg(info_mesg)
+    assert parsed_info_message == ~s({"server": "gnatsd", version: "0.8.0", auth_required: true})
+  end
+
+  test "parsing payload" do
+    test_payload = ~s(hello\r\n)
+    parsed_payload = Protocol.parse_payload(test_payload)
+    assert parsed_payload == "hello"
+  end
+
+  test "parsing message without a reply to subject" do
+    test_message = ~s(foo 23 10\r\n)
+    parsed_message = Protocol.parse_message(test_message)
+    assert parsed_message == {"foo", nil, "23", "10"}
+  end
+
+  test "parsing a message witha reply to subject" do
+    test_message = ~s(foo bar 23 10\r\n)
+    parsed_message = Protocol.parse_message(test_message)
+    assert parsed_message == {"foo", "bar", "23", "10"}
+  end
 end

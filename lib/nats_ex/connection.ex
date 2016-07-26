@@ -17,10 +17,6 @@ defmodule NatsEx.Connection do
   use GenServer
   alias NatsEx.SidCounter
 
-  @info_regex ~r/INFO (?<info_regex>.+) \r\n/
-  @msg_regex ~r/(?<subject>.+) (?<sid>[0-9]+) (?<reply_to>.+)? ?(?<bytes>[0-9]+)\r\n/
-  @payload_regex ~r/(?<payload>(.|\n|\r|\t)+)\r\n$/
-
   @doc false
   def start_link() do
     GenServer.start_link(__MODULE__, :ok, [])
@@ -90,9 +86,9 @@ defmodule NatsEx.Connection do
     {:ok, info_mesg} = :gen_tcp.recv(socket, 0)
 
     # Decode info
-    info = @info_regex
-    |> Regex.named_captures(info_mesg)
-    |> Map.get("info_regex")
+    info = info_mesg
+    |> parse_info_mesg
+    |> String.trim_trailing
     |> Poison.decode!
 
     # Build connect message
@@ -179,18 +175,14 @@ defmodule NatsEx.Connection do
   @doc false
   # Handle tcp messages
   def handle_info({:tcp, _, "MSG " <> msg}, %{socket: socket} = state) do
-    %{"subject" => subject, "reply_to" => reply_to, "sid" => sid, "bytes" => bytes} = Regex.named_captures(@msg_regex, msg)
-    rep_to = case reply_to do
-               "" -> nil
-               _ -> String.trim(reply_to)
-    end
+    {subject, rep_to, sid, bytes} = parse_message(msg)
     :inet.setopts(socket, packet: :raw)
     {:ok, payload} = :gen_tcp.recv(socket, String.to_integer(bytes) + 2) # Adding 2 for "/r/n"
-    %{"payload" => new_payload} = Regex.named_captures(@payload_regex, payload)
-    
+    payload = parse_payload(payload)
+
     {:p, :l, {:unsub, String.to_integer(sid)}}
     |> :gproc.lookup_values
-    |> send_subscriber_message(sid, subject, rep_to, new_payload)
+    |> send_subscriber_message(sid, subject, rep_to, payload)
     :inet.setopts(socket, packet: :line)
     :inet.setopts(socket, active: :once)
     {:noreply, state}
@@ -212,7 +204,7 @@ defmodule NatsEx.Connection do
 
   @doc false
   def handle_info({:tcp_closed, _}, state) do
-    Logger.error "Nats Connection closed by the server"
+    Logger.warn "Nats Connection closed by the server"
     :pg2.create({:conn, self()})
     {:conn, self()}
     |> :pg2.get_local_members
@@ -222,11 +214,17 @@ defmodule NatsEx.Connection do
     {:stop, :normal, state}
   end
 
+  @doc """
+  Sends messages to subscribers.
+
+  Checks if the process is supposed to unsubscribe after the message received.
+  """
   def send_subcriber_message([{_, 1}], _sid, _subject, _rep_to, _payload) do
     :ok
   end
 
   def send_subscriber_message([{_, num_of_msgs}], sid, subject, rep_to, payload) do
+    # Decreasing the number of messages until the process has to unsub
     :gproc.set_value_shared({:p, :l, {:unsub, String.to_integer(sid)}}, num_of_msgs - 1)
     sid
     |> String.to_integer
@@ -236,6 +234,8 @@ defmodule NatsEx.Connection do
     end)
   end
 
+  # When this function is called, it means that the subscriber didn't
+  # send a unsub request.
   def send_subscriber_message([], sid, subject, rep_to, payload) do
     sid
     |> String.to_integer
