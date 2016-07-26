@@ -8,7 +8,9 @@ defmodule NatsEx.Mixfile do
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps(),
-     docs: [extras: ["README.md"]]]
+     description: description(),
+     package: package(),
+     docs: [extras: ["README.md": [path: "README.md", title: "README"]]]]
   end
 
   # Configuration for the OTP application
@@ -33,5 +35,23 @@ defmodule NatsEx.Mixfile do
      {:gproc, "~> 0.5.0"},
      {:ex_doc, "~> 0.12", only: :dev},
      {:credo, "~> 0.4", only: [:dev, :test]}]
+  end
+
+  defp description do
+    """
+    A pure Elixir Client library for Nats.io messaging system
+    """
+  end
+
+  defp package do
+    [
+      name: :nats_ex,
+      files: ["lib", "mix.exs", "README*","LICENSE*"],
+      maintainers: ["Sarat Chandra <me@saratchandra.in>"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/iamd3vil/nats_ex"
+      }
+    ]
   end
 end

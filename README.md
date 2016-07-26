@@ -14,7 +14,7 @@ You can start a connection with Natsd like this.
 {:ok, conn} = NatsEx.Connection.connection
 ```
 
-#### Subscription
+### Subscription
 
 For subscription to a certain topic, you can use `sub/2` or `sub/3` in `NatsEx.Connection` module. You can also give a queue group for the subscription.
 
@@ -27,7 +27,7 @@ When a new message comes to a certain topic, a new message is received by all th
 
 When the connection is down(closed by the server), all the subscribers receive a message `{:nats_ex, :conn_down}`
 
-#### Publishing
+### Publishing
 
 For publishing to a certain topic, you can use `pub/3` or `pub/4` in `NatsEx.Connection` module. `reply_to` topic is optional.
 
@@ -35,7 +35,7 @@ For publishing to a certain topic, you can use `pub/3` or `pub/4` in `NatsEx.Con
 :ok = NatsEx.Connection.pub(conn, "foo.bar", "This is a payload", "REPLY_SUBJECT")
 ```
 
-#### Unsubscription
+### Unsubscription
 
 You can unsubscribe to a certain topic by using `unsub/2` or `unsub/3` in `NatsEx.Connection` module. You can also specify the number of messages, after which the subscriber will be automatically subscribed.
 
@@ -45,13 +45,13 @@ You can unsubscribe to a certain topic by using `unsub/2` or `unsub/3` in `NatsE
 
 ## Installation
 
-It's not available on Hex yet, but if you want to try it out:
+`nats_ex` is available on Hex. For installing, you can do this:
 
   1. Add `nats_ex` to your list of dependencies in `mix.exs`:
 
     ```elixir
     def deps do
-      [{:nats_ex, github: "iamd3vil/nats_ex"}]
+      [{:nats_ex, "~> 0.1"}]
     end
     ```
 
