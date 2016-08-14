@@ -45,11 +45,11 @@ defmodule NatsEx.Protocol do
   @doc """
   Makes a publish message
   """
+  @spec make_pub_message(String.t, nil | String.t, String.t) :: String.t
   def make_pub_message(subject, nil, payload) do
     num_of_bytes = :erlang.byte_size(payload)
     "PUB #{subject} #{num_of_bytes}\r\n#{payload}\r\n"
   end
-
   def make_pub_message(subject, reply_to, payload) do
     num_of_bytes = :erlang.byte_size(payload)
     "PUB #{subject} #{reply_to} #{num_of_bytes}\r\n#{payload}\r\n"
@@ -58,10 +58,10 @@ defmodule NatsEx.Protocol do
   @doc """
   Makes a subscription message
   """
+  @spec make_pub_message(String.t, nil | String.t, String.t) :: String.t
   def make_sub_message(subject, nil, sid) do
     "SUB #{subject} #{sid}\s\n"
   end
-
   def make_sub_message(subject, queue_group, sid) do
     "SUB #{subject} #{queue_group} #{sid}\r\n"
   end
@@ -69,6 +69,7 @@ defmodule NatsEx.Protocol do
   @doc """
   Makes an unsub message
   """
+  @spec make_unsub_message(integer, nil | integer) :: String.t
   def make_unsub_message(sid, nil) do
     "UNSUB #{sid}\r\n"
   end

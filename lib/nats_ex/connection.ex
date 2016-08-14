@@ -10,7 +10,7 @@ defmodule NatsEx.Connection do
       iex> NatsEx.Connection.pub("foo", "hey")
          :ok
       iex> flush()
-         {:nats_ex, :msg, "foo", nil, "hey"} # See `sub/2` for more details about message format
+         {:nats_ex, :msg, "foo", nil, "hey"} # See `NatsEx.Connection.sub/2` for more details about message format
   """
   require Logger
   import NatsEx.Protocol
@@ -44,6 +44,9 @@ defmodule NatsEx.Connection do
   For subscribing to any subject
 
   `queue_group` is optional
+
+  When a new message arrives, the subscribed process gets a
+  message. The format of the message is `{:nats_ex, subject, reply_to_subject, payload}`
   """
   @spec sub(pid, String.t, integer) :: :ok
   def sub(conn, subject, queue_group \\ nil) do
@@ -217,7 +220,7 @@ defmodule NatsEx.Connection do
   @doc """
   Sends messages to subscribers.
 
-  Checks if the process is supposed to unsubscribe after the message received.
+  Checks if the process is supposed to unsubscribe after the message is received.
   """
   def send_subcriber_message([{_, 1}], _sid, _subject, _rep_to, _payload) do
     :ok
