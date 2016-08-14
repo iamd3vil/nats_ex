@@ -12,11 +12,13 @@ defmodule NatsEx do
     # Initialize syn
     # :syn.init()
 
+    # Initialize sid counter ets table
+    NatsEx.SidCounter.init(0)
+
     # Define workers and child supervisors to be supervised
     children = [
       # Starts a worker by calling: NatsEx.Worker.start_link(arg1, arg2, arg3)
       # worker(NatsEx.Worker, [arg1, arg2, arg3]),
-      worker(NatsEx.SidCounter, []),
       supervisor(NatsEx.ConnectionSup, [])
     ]
 

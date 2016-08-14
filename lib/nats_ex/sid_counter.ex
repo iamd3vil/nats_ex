@@ -1,20 +1,19 @@
 defmodule NatsEx.SidCounter do
   @moduledoc false
-  use GenServer
 
-  def start_link() do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+  @counter_name :sid_counter
+
+  def init(count) do
+    table = :ets.new(@counter_name,
+                  [:named_table, :set, :public, read_concurrency: true, write_concurrency: true])
+    :ets.insert(@counter_name, {:counter, count})
   end
 
   def inc() do
-    GenServer.call(__MODULE__, :inc)
-  end
-
-  def init(:ok) do
-    {:ok, 0}
-  end
-
-  def handle_call(:inc, _from, count) do
-    {:reply, count + 1, count + 1}
+    case :ets.lookup(@counter_name, :counter) do
+      [{:counter, counter}] ->
+        :ets.insert(@counter_name, {:counter, counter + 1})
+        counter
+    end
   end
 end
