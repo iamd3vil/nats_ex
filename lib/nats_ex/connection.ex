@@ -84,7 +84,7 @@ defmodule NatsEx.Connection do
   @spec init(:ok) :: {:ok, map}
   def init(:ok) do
     {host, port} = get_host_port()
-    {:ok, {:hostent, _, _, _, _, [ip_addr]}} = :inet.gethostbyname(host |> String.to_charlist)
+    {:ok, {:hostent, _, _, _, _, [ip_addr | _]}} = :inet.gethostbyname(host |> String.to_charlist)
     {:ok, socket} = :gen_tcp.connect(ip_addr, port, [active: :false, mode: :binary, packet: :line])
     {:ok, info_mesg} = :gen_tcp.recv(socket, 0)
 
