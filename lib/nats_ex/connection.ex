@@ -2,15 +2,27 @@ defmodule NatsEx.Connection do
   @moduledoc """
   A GenServer implementing a connection to Natsd server.
 
+  You can set options for Nats in your config.exs. For example
+
+  ```elixir
+  config :nats_ex, host: "localhost", port: 4222
+  ```
+  Supported options are:
+
+  - `username`: Username, if auth is required
+  - `password`: Password, if auth is required
+  - `host`: Host for Nats server. Defaults to `localhost`
+  - `port`: Port for Nats server. Defaults to `4222`
+
   For example,
       iex> {:ok, conn} = NatsEx.Connection.connection
-         {:ok, #PID<0.153.0>}
+      {:ok, #PID<0.153.0>}
       iex> NatsEx.Connection.sub("foo")
-         :ok
+      :ok
       iex> NatsEx.Connection.pub("foo", "hey")
-         :ok
+      :ok
       iex> flush()
-         {:nats_ex, :msg, "foo", nil, "hey"} # See `NatsEx.Connection.sub/2` for more details about message format
+      {:nats_ex, :msg, "foo", nil, "hey"} # See `NatsEx.Connection.sub/2` for more details about message format
   """
   require Logger
   import NatsEx.Protocol

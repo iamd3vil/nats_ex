@@ -8,7 +8,7 @@ Currently PubSub functionality is implemented.
 
 ## Getting started
 
-You can start a connection with Natsd like this.
+You can start a connection with Natsd like this. See NatsEx.Connection for configuration options.
 
 ```elixir
 {:ok, conn} = NatsEx.Connection.connection
@@ -62,6 +62,13 @@ You can unsubscribe to a certain topic by using `unsub/2` or `unsub/3` in `NatsE
       [applications: [:nats_ex]]
     end
     ```
+
+## TODO
+
+- [x] Authorization
+- [ ] TLS
+- [x] Publish, Subscribe
+- [ ] Request, Reply
 
 ## License
 
