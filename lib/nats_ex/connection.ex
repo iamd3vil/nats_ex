@@ -64,12 +64,12 @@ defmodule NatsEx.Connection do
   def sub(conn, subject, queue_group \\ nil) do
     sid = SidCounter.inc()
     :ok = GenServer.call(conn, {:sub, self(), subject, sid, queue_group})
-    :gproc.reg({:p, :l, {self(), conn, subject}}, sid)
+    Registry.register(:sids, {self(), conn, subject}, sid)
     :ok
   end
 
   defp reg_unpub_gproc(sid, num_of_msgs) do
-    :gproc.reg_shared({:p, :l, {:unsub, sid}}, num_of_msgs)
+    :ets.insert(:unsub_ets, {{:unsub, sid}, num_of_msgs})
   end
 
   @doc """
@@ -80,7 +80,8 @@ defmodule NatsEx.Connection do
   """
   @spec unsub(pid, String.t, integer | nil) :: :ok
   def unsub(conn, subject, num_of_msgs \\ nil) do
-    [{_, sid}] = :gproc.lookup_values({:p, :l, {self(), conn, subject}})
+    [{_, sid}] = Registry.lookup(:sids, {self(), conn, subject})
+
     if num_of_msgs == nil do
       :pg2.leave(sid, self())
       reg_unpub_gproc(sid, 0)
@@ -138,7 +139,7 @@ defmodule NatsEx.Connection do
 
   @spec build_connect_message(boolean) :: String.t
   defp build_connect_message(true) do
-    get_auth_credentials
+    get_auth_credentials()
     |> case do
          {username, password} when username != nil and password != nil ->
            msg = %{
@@ -195,9 +196,10 @@ defmodule NatsEx.Connection do
     {:ok, payload} = :gen_tcp.recv(socket, String.to_integer(bytes) + 2) # Adding 2 for "/r/n"
     payload = parse_payload(payload)
 
-    {:p, :l, {:unsub, String.to_integer(sid)}}
-    |> :gproc.lookup_values
+    :unsub_ets
+    |> :ets.lookup({:unsub, String.to_integer(sid)})
     |> send_subscriber_message(sid, subject, rep_to, payload)
+
     :inet.setopts(socket, packet: :line)
     :inet.setopts(socket, active: :once)
     {:noreply, state}
@@ -238,9 +240,10 @@ defmodule NatsEx.Connection do
     :ok
   end
 
-  def send_subscriber_message([{_, num_of_msgs}], sid, subject, rep_to, payload) do
+  def send_subscriber_message([{_, _num_of_msgs}], sid, subject, rep_to, payload) do
     # Decreasing the number of messages until the process has to unsub
-    :gproc.set_value_shared({:p, :l, {:unsub, String.to_integer(sid)}}, num_of_msgs - 1)
+    :ets.update_counter(:unsub_ets, {:unsub, String.to_integer(sid)}, -1)
+
     sid
     |> String.to_integer
     |> :pg2.get_local_members
