@@ -2,23 +2,24 @@ defmodule NatsEx.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :nats_ex,
-     version: "0.1.0",
-     elixir: "~> 1.4",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     deps: deps(),
-     description: description(),
-     package: package(),
-     docs: [extras: ["README.md": [path: "README.md", title: "README"]]]]
+    [
+      app: :nats_ex,
+      version: "0.1.0",
+      elixir: "~> 1.5",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      deps: deps(),
+      description: description(),
+      package: package(),
+      docs: [extras: ["README.md": [path: "README.md", title: "README"]]]
+    ]
   end
 
   # Configuration for the OTP application
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :poison],
-     mod: {NatsEx, []}]
+    [applications: [:logger, :poison], mod: {NatsEx, []}]
   end
 
   # Dependencies can be Hex packages:
@@ -31,9 +32,11 @@ defmodule NatsEx.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:poison, "~> 3.1"},
-     {:ex_doc, "~> 0.16", only: :dev},
-     {:credo, "~> 0.8", only: [:dev, :test]}]
+    [
+      {:poison, "~> 3.1"},
+      {:ex_doc, "~> 0.16", only: :dev},
+      {:credo, "~> 0.9", only: [:dev, :test]}
+    ]
   end
 
   defp description do
@@ -45,7 +48,7 @@ defmodule NatsEx.Mixfile do
   defp package do
     [
       name: :nats_ex,
-      files: ["lib", "mix.exs", "README*","LICENSE*"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*"],
       maintainers: ["Sarat Chandra <me@saratchandra.in>"],
       licenses: ["MIT"],
       links: %{

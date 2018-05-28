@@ -4,7 +4,7 @@ defmodule NatsEx.ConnectionTest do
   require Logger
 
   setup do
-    {:ok, conn} = NatsEx.Connection.connection
+    {:ok, conn} = NatsEx.Connection.connection()
     {:ok, [conn: conn]}
   end
 
@@ -33,8 +33,10 @@ defmodule NatsEx.ConnectionTest do
   # Subscribes and then publishes and then asserts that message
   # has been received
   defp sub_and_pub(conn, subject, message) do
-    assert :ok = NatsEx.Connection.sub(conn, subject) # Subscribe
-    assert :ok = NatsEx.Connection.pub(conn, subject, message) # Publish
+    # Subscribe
+    assert :ok = NatsEx.Connection.sub(conn, subject)
+    # Publish
+    assert :ok = NatsEx.Connection.pub(conn, subject, message)
     assert_receive({:nats_ex, :msg, ^subject, nil, ^message})
   end
 

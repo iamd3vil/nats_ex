@@ -4,8 +4,14 @@ defmodule NatsEx.SidCounter do
   @counter_name :sid_counter
 
   def init(count) do
-    :ets.new(@counter_name, [:named_table, :set,
-                             :public, read_concurrency: true, write_concurrency: true])
+    :ets.new(@counter_name, [
+      :named_table,
+      :set,
+      :public,
+      read_concurrency: true,
+      write_concurrency: true
+    ])
+
     :ets.insert(@counter_name, {:counter, count})
   end
 
