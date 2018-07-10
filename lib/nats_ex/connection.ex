@@ -127,7 +127,7 @@ defmodule NatsEx.Connection do
   @spec require_auth?(map) :: boolean
   def require_auth?(info) do
     info
-    |> Map.get("auth_required")
+    |> Map.get("auth_required", false)
   end
 
   @spec get_host_port() :: {String.t(), integer}
