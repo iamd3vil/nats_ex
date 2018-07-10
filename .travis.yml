@@ -6,6 +6,7 @@ elixir:
 otp_release:
   - 19.0
   - 20.0
+  - 21.0
 
 before_install:
   - bash ./install_gnatsd.sh
