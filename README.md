@@ -1,7 +1,5 @@
 # NatsEx [![Build Status](https://travis-ci.org/iamd3vil/nats_ex.svg?branch=master)](https://travis-ci.org/iamd3vil/nats_ex)
 
-(*WORK IN PROGRESS*)
-
 An idiomatic Elixir client for Nats.io messaging system
 
 Currently PubSub functionality is implemented.
