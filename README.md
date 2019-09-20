@@ -67,6 +67,7 @@ You can unsubscribe to a certain topic by using `unsub/2` or `unsub/3` in `NatsE
 - [ ] TLS
 - [x] Publish, Subscribe
 - [ ] Request, Reply
+- [ ] Nats Streaming
 
 ## License
 
