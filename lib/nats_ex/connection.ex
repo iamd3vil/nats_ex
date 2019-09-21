@@ -111,7 +111,7 @@ defmodule NatsEx.Connection do
       info_mesg
       |> parse_info_mesg
       |> String.trim_trailing()
-      |> Poison.decode!()
+      |> Jason.decode!()
 
     # Build connect message
     connect_mesg =
@@ -159,7 +159,7 @@ defmodule NatsEx.Connection do
             user: username,
             pass: password
           }
-          |> Poison.encode!()
+          |> Jason.encode!()
 
         "CONNECT #{msg}\r\n"
 
