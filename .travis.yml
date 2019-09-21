@@ -3,10 +3,13 @@ sudo: required
 
 elixir:
   - 1.6
+  - 1.7
+  - 1.8
+  - 1.9
 otp_release:
-  - 19.0
   - 20.0
   - 21.0
+  - 22.0
 
 before_install:
   - bash ./install_gnatsd.sh
