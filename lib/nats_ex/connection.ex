@@ -212,7 +212,7 @@ defmodule NatsEx.Connection do
     payload = parse_payload(payload)
 
     :unsub_ets
-    |> :ets.lookup({:unsub, String.to_integer(sid)})
+    |> :ets.lookup({:unsub, sid})
     |> send_subscriber_message(sid, subject, rep_to, payload)
 
     :inet.setopts(socket, packet: :line)
@@ -258,12 +258,10 @@ defmodule NatsEx.Connection do
   end
 
   def send_subscriber_message([{_, _num_of_msgs}], sid, subject, rep_to, payload) do
-    sid_int = String.to_integer(sid)
     # Decreasing the number of messages until the process has to unsub
-    :ets.update_counter(:unsub_ets, {:unsub, sid_int}, -1)
+    :ets.update_counter(:unsub_ets, {:unsub, sid}, -1)
 
     sid
-    |> String.to_integer()
     |> :pg2.get_local_members()
     |> Enum.each(fn member ->
       send(member, {:nats_ex, :msg, subject, rep_to, payload})
@@ -274,7 +272,6 @@ defmodule NatsEx.Connection do
   # send a unsub request.
   def send_subscriber_message([], sid, subject, rep_to, payload) do
     sid
-    |> String.to_integer()
     |> :pg2.get_local_members()
     |> Enum.each(fn member ->
       send(member, {:nats_ex, :msg, subject, rep_to, payload})

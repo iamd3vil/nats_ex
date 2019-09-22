@@ -37,7 +37,7 @@ defmodule NatsEx.Protocol do
     {subject, nil, sid, bytes}
   end
 
-  defp _parse_message([subject, rep_to, sid, bytes]) do
+  defp _parse_message([subject, sid, rep_to, bytes]) do
     {subject, rep_to, sid, bytes}
   end
 

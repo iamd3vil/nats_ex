@@ -18,7 +18,7 @@ defmodule NatsEx.SidCounter do
   def inc() do
     case :ets.lookup(@counter_name, :counter) do
       [{:counter, counter}] ->
-        :ets.insert(@counter_name, {:counter, counter + 1})
+        :ets.insert(@counter_name, {:counter, to_string(String.to_integer(counter) + 1)})
         counter
     end
   end

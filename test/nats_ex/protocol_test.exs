@@ -46,8 +46,8 @@ defmodule NatsEx.ProtocolTest do
     assert parsed_message == {"foo", nil, "23", "10"}
   end
 
-  test "parsing a message witha reply to subject" do
-    test_message = ~s(foo bar 23 10\r\n)
+  test "parsing a message with a reply to subject" do
+    test_message = ~s(foo 23 bar 10\r\n)
     parsed_message = Protocol.parse_message(test_message)
     assert parsed_message == {"foo", "bar", "23", "10"}
   end
