@@ -15,6 +15,19 @@ defmodule NatsEx.Stream.Connection do
     Supervisor.start_child(NatsEx.Stream.ConnectionSup, [])
   end
 
+  def subscribe(conn, subject) do
+    sub_req =
+      Messages.SubscriptionRequest.new(%{
+        subject: subject,
+        inbox: Utils.generate_random_id(),
+        maxInFlight: 100,
+        ackWaitInSecs: 10,
+        startPosition: Messages.StartPosition.value(:First)
+      })
+
+    GenServer.call(conn, {:sub, sub_req})
+  end
+
   @doc false
   def start_link() do
     GenServer.start_link(__MODULE__, :ok, [])
@@ -23,8 +36,6 @@ defmodule NatsEx.Stream.Connection do
   @doc false
   def init(:ok) do
     {:ok, conn} = UConn.connection()
-
-    IO.inspect("Got connection.")
 
     # Subscribe to heart beats
     heartbeat_sub = Utils.generate_random_id()
@@ -52,8 +63,6 @@ defmodule NatsEx.Stream.Connection do
       resp_sub
     )
 
-    IO.inspect("Sent cr message: #{inspect(cr)}")
-
     # Wait for connect response
     receive do
       {:nats_ex, :msg, ^resp_sub, _, payload} ->
@@ -64,13 +73,13 @@ defmodule NatsEx.Stream.Connection do
            conn: conn,
            client_id: client_id,
            heartbeat_sub: heartbeat_sub,
-           resp_sub: resp_sub,
            pub_prefix: resp.pubPrefix,
            sub_requests: resp.subRequests,
            unsub_requests: resp.unsubRequests,
            close_requests: resp.closeRequests,
            sub_close_requests: resp.subCloseRequests,
-           subs: %{}
+           subs: %{},
+           ack_inboxes: %{}
          }}
     end
   end
@@ -79,28 +88,57 @@ defmodule NatsEx.Stream.Connection do
         {:nats_ex, :msg, heartbeat_sub, rep_to, ""},
         %{heartbeat_sub: heartbeat_sub} = state
       ) do
-    Logger.debug("Responding to heartbeat")
     :ok = UConn.pub(state.conn, rep_to, "", "")
     {:noreply, state}
   end
 
-  def handle_call({:sub, sub_request}, from, %{sub_requests: sub_requests} = state) do
+  # Handle sub response
+  def handle_info(
+        {:nats_ex, :msg, resp_sub, _rep_to, payload},
+        state
+      ) do
+    Logger.debug("Got subscription response")
+
+    # Decode sub response
+    resp = Messages.SubscriptionResponse.decode(payload)
+
+    # Reply to appropriate genserver call and also get the inbox
+    # Lookup using resp_sub.
+    {caller, inbox} = get_in(state, [:subs, resp_sub])
+
+    # Save ackInbox against inbox
+    new_state = put_in(state, [:ack_inboxes, inbox], resp.ackInbox)
+
+    GenServer.reply(caller, :ok)
+    {:noreply, new_state}
+  end
+
+  def handle_call(
+        {:sub, sub_request},
+        from,
+        %{sub_requests: sub_requests} = state
+      ) do
     # Set Client ID
     sub_request =
       Messages.SubscriptionRequest.new(%{
         Map.from_struct(sub_request)
-        | client_id: state.client_id
+        | clientID: state.client_id
       })
+
+    resp_sub = Utils.generate_random_id()
+    UConn.sub(state.conn, resp_sub)
 
     :ok =
       UConn.pub(
         state.conn,
         sub_requests,
         Messages.SubscriptionRequest.encode(sub_request),
-        state.resp_sub
+        resp_sub
       )
 
-    new_state = put_in(state, [:subs, sub_request.subject], from)
+    # Store caller ref against resp subject for sub response
+    # We can lookup this ref when we get the sub response from NATS
+    new_state = put_in(state, [:subs, resp_sub], {from, sub_request.inbox})
 
     {:noreply, new_state}
   end
