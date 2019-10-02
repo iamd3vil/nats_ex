@@ -104,10 +104,10 @@ defmodule NatsEx.Stream.Connection do
 
     # Reply to appropriate genserver call and also get the inbox
     # Lookup using resp_sub.
-    {caller, inbox} = get_in(state, [:subs, resp_sub])
+    {{caller, inbox}, new_state} = get_and_update_in(state, [:subs, resp_sub], fn _ -> :pop end)
 
     # Save ackInbox against inbox
-    new_state = put_in(state, [:ack_inboxes, inbox], resp.ackInbox)
+    new_state = put_in(new_state, [:ack_inboxes, inbox], resp.ackInbox)
 
     GenServer.reply(caller, :ok)
     {:noreply, new_state}
