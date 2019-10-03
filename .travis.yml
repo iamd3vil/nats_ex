@@ -12,3 +12,7 @@ otp_release:
 
 before_install:
   - bash ./install_natsstreaming.sh
+
+branches:
+  only:
+  - master
