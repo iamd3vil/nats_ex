@@ -11,4 +11,4 @@ otp_release:
   - 22.0
 
 before_install:
-  - bash ./install_natsd.sh
+  - bash ./install_natsstreaming.sh
