@@ -9,6 +9,6 @@ defmodule NatsEx.StreamingConnTest do
   end
 
   test "subscription", %{conn: conn} do
-    assert :ok = Connection.subscribe(conn, "test-sub")
+    assert :ok = Connection.subscribe(conn, "test-sub", [])
   end
 end

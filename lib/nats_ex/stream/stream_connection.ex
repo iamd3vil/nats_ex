@@ -15,14 +15,18 @@ defmodule NatsEx.Stream.Connection do
     Supervisor.start_child(NatsEx.Stream.ConnectionSup, [])
   end
 
-  def subscribe(conn, subject) do
+  @spec subscribe(pid, String.t(), Keyword.t()) :: :ok | {:error, :timeout}
+  def subscribe(conn, subject, opts) do
     sub_req =
       Messages.SubscriptionRequest.new(%{
         subject: subject,
         inbox: Utils.generate_random_id(),
-        maxInFlight: 100,
-        ackWaitInSecs: 10,
-        startPosition: Messages.StartPosition.value(:First)
+        maxInFlight: Keyword.get(opts, :max_in_flight, 100),
+        ackWaitInSecs: Keyword.get(opts, :ack_wait_in_secs, 5),
+        startPosition: Messages.StartPosition.value(:First),
+        durableName: Keyword.get(opts, :durable_name, ""),
+        startSequence: Keyword.get(opts, :start_sequence, 0),
+        startTimeDelta: Keyword.get(opts, :start_time_delta, 0)
       })
 
     GenServer.call(conn, {:sub, sub_req})
