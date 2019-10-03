@@ -11,4 +11,8 @@ defmodule NatsEx.StreamingConnTest do
   test "subscription", %{conn: conn} do
     assert :ok = Connection.subscribe(conn, "test-sub", [])
   end
+
+  test "publishing", %{conn: conn} do
+    assert :ok = Connection.publish(conn, "test-pub", [])
+  end
 end

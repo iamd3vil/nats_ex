@@ -32,6 +32,21 @@ defmodule NatsEx.Stream.Connection do
     GenServer.call(conn, {:sub, sub_req})
   end
 
+  def publish(conn, subject, payload) do
+    pub_msg =
+      Messages.PubMsg.new(%{
+        guid: Utils.generate_random_id(),
+        subject: subject,
+        data: payload
+      })
+
+    GenServer.call(conn, {:pub, pub_msg})
+  end
+
+  ##################
+  # Server Callbacks
+  ##################
+
   @doc false
   def start_link() do
     GenServer.start_link(__MODULE__, :ok, [])
@@ -48,6 +63,10 @@ defmodule NatsEx.Stream.Connection do
     # Subscribe for response
     resp_sub = Utils.generate_random_id()
     UConn.sub(conn, resp_sub)
+
+    # Subscribe for pub ack responses
+    pub_ack_sub = Utils.generate_random_id()
+    UConn.sub(conn, pub_ack_sub)
 
     client_id = Utils.generate_random_id()
 
@@ -82,7 +101,9 @@ defmodule NatsEx.Stream.Connection do
            unsub_requests: resp.unsubRequests,
            close_requests: resp.closeRequests,
            sub_close_requests: resp.subCloseRequests,
+           pub_ack_sub: pub_ack_sub,
            subs: %{},
+           pubs: %{},
            ack_inboxes: %{}
          }}
     end
@@ -98,11 +119,9 @@ defmodule NatsEx.Stream.Connection do
 
   # Handle sub response
   def handle_info(
-        {:nats_ex, :msg, resp_sub, _rep_to, payload},
+        {:nats_ex, :msg, "sub_resp." <> _ = resp_sub, _rep_to, payload},
         state
       ) do
-    Logger.debug("Got subscription response")
-
     # Decode sub response
     resp = Messages.SubscriptionResponse.decode(payload)
 
@@ -114,6 +133,42 @@ defmodule NatsEx.Stream.Connection do
     new_state = put_in(new_state, [:ack_inboxes, inbox], resp.ackInbox)
 
     GenServer.reply(caller, :ok)
+    {:noreply, new_state}
+  end
+
+  # Handle pub acks
+  def handle_info(
+        {:nats_ex, :msg, pub_ack_sub, _rep_to, payload},
+        %{pub_ack_sub: pub_ack_sub} = state
+      ) do
+    resp = Messages.PubAck.decode(payload)
+
+    # Lookup caller from pubs in state
+    {caller, new_state} = get_and_update_in(state, [:pubs, resp.guid], fn _ -> :pop end)
+
+    GenServer.reply(caller, :ok)
+    {:noreply, new_state}
+  end
+
+  def handle_call({:pub, pub_msg}, from, state) do
+    # Set Client ID
+    pub_msg =
+      Messages.PubMsg.new(%{
+        Map.from_struct(pub_msg)
+        | clientID: state.client_id
+      })
+
+    # Store guid to caller in pubs
+    new_state = put_in(state, [:pubs, pub_msg.guid], from)
+
+    # Publish to NATS
+    UConn.pub(
+      state.conn,
+      "#{state.pub_prefix}.#{pub_msg.subject}",
+      Messages.PubMsg.encode(pub_msg),
+      state.pub_ack_sub
+    )
+
     {:noreply, new_state}
   end
 
@@ -129,7 +184,7 @@ defmodule NatsEx.Stream.Connection do
         | clientID: state.client_id
       })
 
-    resp_sub = Utils.generate_random_id()
+    resp_sub = "sub_resp.#{Utils.generate_random_id()}"
     UConn.sub(state.conn, resp_sub)
 
     :ok =

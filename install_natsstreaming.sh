@@ -14,7 +14,7 @@ if [ ! "$(ls -A $HOME/nats-streaming-server)" ]; then
 	      unzip nats-streaming-server.zip
 	      cp nats-streaming-server-$NATS_STREAMING_SERVER_VERSION-linux-amd64/nats-streaming-server $HOME/nats-streaming-server/nats-streaming-server
         # start gnatsd server
-        nohup $HOME/nats-streaming-server/nats-streaming-server &
+        nohup $HOME/nats-streaming-server/nats-streaming-server -cid mycluster &
     )
 else
     echo 'Using cached directory.';
