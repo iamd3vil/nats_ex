@@ -20,8 +20,7 @@ defmodule NatsEx do
 
     # Define workers and child supervisors to be supervised
     children = [
-      # Starts a worker by calling: NatsEx.Worker.start_link(arg1, arg2, arg3)
-      # worker(NatsEx.Worker, [arg1, arg2, arg3]),
+      NatsEx.ProcessGroup,
       supervisor(NatsEx.ConnectionSup, []),
       worker(Registry, [:duplicate, :sids])
     ]
