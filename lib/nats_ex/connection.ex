@@ -26,20 +26,20 @@ defmodule NatsEx.Connection do
   """
   require Logger
   import NatsEx.Protocol
-  use GenServer
+  use GenServer, restart: :transient
   alias NatsEx.{ProcessGroup, SidCounter}
 
   @doc false
-  def start_link() do
-    GenServer.start_link(__MODULE__, :ok, [])
+  def start_link(init_arg) do
+    GenServer.start_link(__MODULE__, init_arg, [])
   end
 
   @doc """
   Opens a connection
   """
-  @spec connection() :: {:ok, pid}
+  @spec connection() :: DynamicSupervisor.on_start_child()
   def connection() do
-    Supervisor.start_child(NatsEx.ConnectionSup, [])
+    DynamicSupervisor.start_child(NatsEx.ConnectionSup, __MODULE__)
   end
 
   @doc """
@@ -96,8 +96,8 @@ defmodule NatsEx.Connection do
   # Server callbacks
 
   @doc false
-  @spec init(:ok) :: {:ok, map}
-  def init(:ok) do
+  @impl GenServer
+  def init(_init_arg) do
     {host, port} = get_host_port()
 
     {:ok, {:hostent, _, _, _, _, [ip_addr | _]}} =
@@ -174,6 +174,7 @@ defmodule NatsEx.Connection do
 
   @doc false
   # Handler for publish call
+  @impl GenServer
   def handle_call({:pub, subject, reply_to, payload}, _from, %{socket: socket} = state) do
     # Makes a publish string
     pub_message = make_pub_message(subject, reply_to, payload)
@@ -196,6 +197,7 @@ defmodule NatsEx.Connection do
   end
 
   @doc false
+  @impl GenServer
   def handle_cast({:unsub, _from, sid, num_of_msgs}, %{socket: socket} = state) do
     unsub_mesg = make_unsub_message(sid, num_of_msgs)
     :gen_tcp.send(socket, unsub_mesg)
@@ -204,6 +206,7 @@ defmodule NatsEx.Connection do
 
   @doc false
   # Handle tcp messages
+  @impl GenServer
   def handle_info({:tcp, _, "MSG " <> msg}, %{socket: socket} = state) do
     {subject, rep_to, sid, bytes} = parse_message(msg)
     :inet.setopts(socket, packet: :raw)

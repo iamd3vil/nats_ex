@@ -6,9 +6,8 @@ defmodule NatsEx do
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
   # for more information on OTP Applications
+  @impl Application
   def start(_type, _args) do
-    import Supervisor.Spec, warn: false
-
     # Initialize syn
     # :syn.init()
 
@@ -18,15 +17,12 @@ defmodule NatsEx do
     # Stores a counter with how many messages still there for the `sid` to unsubscribe.
     :unsub_ets = :ets.new(:unsub_ets, [:public, :named_table, :set])
 
-    # Define workers and child supervisors to be supervised
     children = [
       NatsEx.ProcessGroup,
-      supervisor(NatsEx.ConnectionSup, []),
-      worker(Registry, [:duplicate, :sids])
+      NatsEx.ConnectionSup,
+      {Registry, keys: :duplicate, name: :sids}
     ]
 
-    # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: NatsEx.Supervisor]
     Supervisor.start_link(children, opts)
   end
