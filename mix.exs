@@ -4,8 +4,8 @@ defmodule NatsEx.Mixfile do
   def project do
     [
       app: :nats_ex,
-      version: "0.2.0",
-      elixir: "~> 1.7",
+      version: "0.3.0",
+      elixir: "~> 1.10",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -19,7 +19,7 @@ defmodule NatsEx.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [mod: {NatsEx, []}, extra_applications: [:logger]]
+    [mod: {NatsEx, []}, extra_applications: [:logger, :crypto, :eex]]
   end
 
   # Dependencies can be Hex packages:
@@ -33,8 +33,8 @@ defmodule NatsEx.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:jason, "~> 1.1"},
-      {:ex_doc, "~> 0.21", only: :dev},
+      {:jason, "~> 1.2"},
+      {:ex_doc, "~> 0.26", only: :dev},
       {:credo, "~> 0.9", only: [:dev, :test]}
     ]
   end
