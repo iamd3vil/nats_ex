@@ -1,17 +1,15 @@
 defmodule NatsEx.ConnectionSup do
   @moduledoc false
-  use Supervisor
 
-  def start_link do
-    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
+  use DynamicSupervisor
+
+  @spec start_link(term()) :: Supervisor.on_start()
+  def start_link(init_arg) do
+    DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
 
-  def init([]) do
-    children = [
-      worker(NatsEx.Connection, [], restart: :transient)
-    ]
-
-    # supervise/2 is imported from Supervisor.Spec
-    supervise(children, strategy: :simple_one_for_one)
+  @impl DynamicSupervisor
+  def init(_init_arg) do
+    DynamicSupervisor.init(strategy: :one_for_one)
   end
 end

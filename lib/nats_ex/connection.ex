@@ -26,20 +26,20 @@ defmodule NatsEx.Connection do
   """
   require Logger
   import NatsEx.Protocol
-  use GenServer
-  alias NatsEx.SidCounter
+  use GenServer, restart: :transient
+  alias NatsEx.{ProcessGroup, SidCounter}
 
   @doc false
-  def start_link() do
-    GenServer.start_link(__MODULE__, :ok, [])
+  def start_link(init_arg) do
+    GenServer.start_link(__MODULE__, init_arg, [])
   end
 
   @doc """
   Opens a connection
   """
-  @spec connection() :: {:ok, pid}
+  @spec connection() :: DynamicSupervisor.on_start_child()
   def connection() do
-    Supervisor.start_child(NatsEx.ConnectionSup, [])
+    DynamicSupervisor.start_child(NatsEx.ConnectionSup, __MODULE__)
   end
 
   @doc """
@@ -83,7 +83,7 @@ defmodule NatsEx.Connection do
     [{_, sid}] = Registry.lookup(:sids, {self(), conn, subject})
 
     if num_of_msgs == nil do
-      :pg2.leave(sid, self())
+      ProcessGroup.leave(sid, self())
       reg_unpub_gproc(sid, 0)
     else
       # Storing number of messages, after which it has to unsubscribe
@@ -96,8 +96,8 @@ defmodule NatsEx.Connection do
   # Server callbacks
 
   @doc false
-  @spec init(:ok) :: {:ok, map}
-  def init(:ok) do
+  @impl GenServer
+  def init(_init_arg) do
     {host, port} = get_host_port()
 
     {:ok, {:hostent, _, _, _, _, [ip_addr | _]}} =
@@ -174,6 +174,7 @@ defmodule NatsEx.Connection do
 
   @doc false
   # Handler for publish call
+  @impl GenServer
   def handle_call({:pub, subject, reply_to, payload}, _from, %{socket: socket} = state) do
     # Makes a publish string
     pub_message = make_pub_message(subject, reply_to, payload)
@@ -185,17 +186,18 @@ defmodule NatsEx.Connection do
   def handle_call({:sub, from, subject, sid, queue_group}, _from, %{socket: socket} = state) do
     sub_message = make_sub_message(subject, sid, queue_group)
     # Creating since pg2 doesn't automatically create the process group
-    :pg2.create(sid)
-    :pg2.create({:conn, self()})
+    ProcessGroup.create(sid)
+    ProcessGroup.create({:conn, self()})
     # Join a process group named with `sid`
-    :pg2.join(sid, from)
+    ProcessGroup.join(sid, from)
     # For maintaining subscribed processes for this connections
-    :pg2.join({:conn, self()}, from)
+    ProcessGroup.join({:conn, self()}, from)
     :gen_tcp.send(socket, sub_message)
     {:reply, :ok, state}
   end
 
   @doc false
+  @impl GenServer
   def handle_cast({:unsub, _from, sid, num_of_msgs}, %{socket: socket} = state) do
     unsub_mesg = make_unsub_message(sid, num_of_msgs)
     :gen_tcp.send(socket, unsub_mesg)
@@ -204,6 +206,7 @@ defmodule NatsEx.Connection do
 
   @doc false
   # Handle tcp messages
+  @impl GenServer
   def handle_info({:tcp, _, "MSG " <> msg}, %{socket: socket} = state) do
     {subject, rep_to, sid, bytes} = parse_message(msg)
     :inet.setopts(socket, packet: :raw)
@@ -237,10 +240,10 @@ defmodule NatsEx.Connection do
   @doc false
   def handle_info({:tcp_closed, _}, state) do
     Logger.warn("Nats Connection closed by the server")
-    :pg2.create({:conn, self()})
+    ProcessGroup.create({:conn, self()})
 
     {:conn, self()}
-    |> :pg2.get_local_members()
+    |> ProcessGroup.get_local_members()
     |> Enum.each(fn member ->
       send(member, {:nats_ex, :conn_down})
     end)
@@ -264,7 +267,7 @@ defmodule NatsEx.Connection do
 
     sid
     |> String.to_integer()
-    |> :pg2.get_local_members()
+    |> ProcessGroup.get_local_members()
     |> Enum.each(fn member ->
       send(member, {:nats_ex, :msg, subject, rep_to, payload})
     end)
@@ -275,7 +278,7 @@ defmodule NatsEx.Connection do
   def send_subscriber_message([], sid, subject, rep_to, payload) do
     sid
     |> String.to_integer()
-    |> :pg2.get_local_members()
+    |> ProcessGroup.get_local_members()
     |> Enum.each(fn member ->
       send(member, {:nats_ex, :msg, subject, rep_to, payload})
     end)
